@@ -1,1 +1,33 @@
-/* Add styles here */
+
+/* Define color variables for the application */
+:root {
+    /* Core Palette */
+    --primary-blue-dark: #0a0f31; /* Deepest blue for the main background */
+    --container-blue: #1c2a6c;     /* Lighter blue for the main game container */
+    --text-color-bright: #ffffff;    /* Bright white for titles and key text */
+    --text-color-dark: #a9b3d1;     /* Muted blue/gray for less important text */
+    --highlight-yellow: #ffd700;    /* Golden yellow for highlights and important numbers */
+    --primary-blue-light: #4ab3ff;  /* Light blue for highlights and interactive elements */
+
+    /* Grade-Specific Colors */
+    --sss-color: #ff69b4; /* Pink for SSS-Grade */
+    --ss-color: #800080;  /* Dark Purple for SS-Grade */
+    --s-color: #55aaff;   /* Example: Bright Blue */
+    --a-color: #55ff55;   /* Example: Bright Green */
+    --b-color: #ff9900;   /* Orange for B-Grade */
+    --c-color: #aaaaaa;   /* Example: Gray */
+}
+
+/* Basic Body Styles */
+body {
+    background-color: var(--primary-blue-dark);
+    color: var(--text-color-bright);
+    font-family: 'Noto Sans KR', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
