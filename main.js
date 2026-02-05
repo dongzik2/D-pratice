@@ -10,7 +10,7 @@ class LottoGame extends HTMLElement {
     this.tickets = this.tickets || 0;
     this.gameStarted = false;
     this.hintCountdown = 3;
-    this.cardToFlip = null; // Card to be flipped after confirmation
+    this.cardToFlip = null;
     this.gradeCounts = { SSS: 1, SS: 2, S: 6, A: 10, B: 18, C: 12 };
     
     let gradePool = Object.entries(this.gradeCounts).flatMap(([grade, count]) => Array(count).fill(grade));
@@ -39,6 +39,16 @@ class LottoGame extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host { --modal-green: #1DB954; }
+        @keyframes sparkle-text {
+          0%, 100% { opacity: 0.8; text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 0 12px var(--primary-blue-light); }
+          50% { opacity: 1; text-shadow: 0 0 8px #fff, 0 0 16px #fff, 0 0 24px var(--primary-blue-light); }
+        }
+        @keyframes hint-pulse-circle {
+            0% { transform: scale(1); opacity: 0.5; box-shadow: 0 0 10px rgba(0, 210, 255, 0.5); }
+            50% { transform: scale(1.2); opacity: 0.8; box-shadow: 0 0 20px rgba(0, 210, 255, 0.8); }
+            100% { transform: scale(1); opacity: 0.5; box-shadow: 0 0 10px rgba(0, 210, 255, 0.5); }
+        }
+
         .main-title { text-align: center; color: var(--text-color-bright); font-size: 2.5rem; font-weight: 700; margin-bottom: 20px; font-family: 'Orbitron', sans-serif; }
         .game-wrapper { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 24px; background-color: var(--container-blue); border-radius: 20px; border: 2px solid #3a4a8a; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 1000px; }
 
@@ -56,7 +66,7 @@ class LottoGame extends HTMLElement {
         .info-item-label { display: flex; align-items: center; gap: 8px; }
         .color-box { width: 16px; height: 16px; border-radius: 3px;}
 
-        .reset-info-panel p { color: var(--text-color-dark); margin: 5px 0; font-size: 0.9rem; line-height: 1.5;}
+        .reset-info-panel p { color: var(--text-color-dark); margin: 5px 0; font-size: 0.9rem; line-height: 1.5; }
         #reset-btn { background-color: #2a3a7a; color: var(--text-color-dark); font-size: 1.1rem; padding: 15px; border-radius: 8px; border: 1px solid #4a5a9a; cursor: pointer; width: 100%; margin-top: 10px; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; }
         #reset-btn:disabled { background-color: #20284a; color: #5a688a; cursor: not-allowed; }
         #reset-btn:not(:disabled) { color: var(--text-color-bright); }
@@ -75,29 +85,31 @@ class LottoGame extends HTMLElement {
         .card { background-color: transparent; aspect-ratio: 1 / 1; cursor: pointer; perspective: 1000px; position: relative; }
         .card-inner { position: absolute; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
         .card.flipped .card-inner { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; justify-content: center; align-items: center; border-radius: 8px; }
-        .card-front { background-color: #0d123c; border: 1px solid #3a4a8a; font-size: 2.2rem; font-family: 'Orbitron'; transition: border-color 0.3s; }
-        .card-back { transform: rotateY(180deg); font-weight: bold; font-size: 2.2rem; color: #fff; border: 2px solid #fff;}
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+        .card-front { background-color: #0d123c; border: 1px solid #3a4a8a; font-family: 'Orbitron'; transition: border-color 0.3s, box-shadow 0.3s; }
+        .card-front-content { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; position: relative; }
+        .card-back { transform: rotateY(180deg); font-weight: bold; font-size: 2.2rem; color: #fff; border: 2px solid #fff; }
+        
+        .card-hint-overlay, .card-hint-text { display: none; }
+        .card.hinted .card-front { border-color: var(--primary-blue-light); }
+        .card.hinted .card-hint-overlay { display: block; position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; margin-top: -25px; margin-left: -25px; background: radial-gradient(circle, rgba(0,210,255,0.6) 0%, rgba(0,150,255,0) 70%); border-radius: 50%; animation: hint-pulse-circle 2s infinite; }
+        .card.hinted .card-hint-text { display: block; position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; color: white; font-size: 1rem; font-weight: bold; animation: sparkle-text 2s infinite; }
 
         .card:not(.flipped):hover .card-front { border-color: var(--highlight-yellow); }
-        .card-number { color: var(--highlight-yellow); transition: opacity 0.3s; }
+        .card-number { color: var(--highlight-yellow); font-size: 2.2rem; transition: opacity 0.3s; z-index: 2; }
         .card:not(.flipped):hover .card-number { opacity: 0; }
-        .card-hover-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; border-radius: 8px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .card-hover-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; border-radius: 8px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 3; }
         .card:not(.flipped):hover .card-hover-overlay { opacity: 1; }
 
-        .hint-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 210, 255, 0.3); border: 2px solid var(--primary-blue-light); z-index: 3; pointer-events: none; border-radius: 8px; display: none; }
-        .card.hinted .hint-overlay { display: block; }
-
-        /* New Modal Styles */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background-color: white; border-radius: 8px; width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden; }
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background-color: white; border-radius: 8px; width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #eee; }
         .modal-title { font-size: 1rem; font-weight: 600; color: #333; }
         .modal-close-btn { font-size: 1.8rem; color: #aaa; cursor: pointer; line-height: 1; }
         .modal-close-btn:hover { color: #333; }
-        .modal-body { padding: 30px; text-align: center; }
-        .modal-body .primary-message { color: var(--modal-green); font-size: 1.25rem; font-weight: 700; margin: 0 0 10px 0; }
-        .modal-body .secondary-message { font-size: 0.9rem; color: #888; }
+        .modal-body { padding: 40px 30px; text-align: center; }
+        .modal-body .primary-message { color: #333; font-size: 1.25rem; font-weight: 700; margin: 0; }
         .modal-footer { display: flex; }
         .modal-footer button { flex: 1; background-color: #333; color: white; border: none; padding: 18px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: filter 0.2s; }
         .modal-footer button:hover { filter: brightness(1.2); }
@@ -106,7 +118,6 @@ class LottoGame extends HTMLElement {
 
       <h1 class="main-title">FC온라인 빠칭코 시뮬레이터</h1>
       <div class="game-wrapper">
-        <!-- Sidebar -->
         <div class="sidebar">
           <div class="sidebar-panel ticket-panel">
             <div class="ticket-panel-header">
@@ -127,7 +138,6 @@ class LottoGame extends HTMLElement {
           </div>
         </div>
 
-        <!-- Game Board -->
         <div class="game-board-area">
             <div class="hint-tracker">
               <div class="hint-tracker-content">
@@ -143,9 +153,12 @@ class LottoGame extends HTMLElement {
               ${this.boardData.map(item => `
                 <div class="card ${item.hinted ? 'hinted' : ''}" data-id="${item.id}">
                   <div class="card-inner">
-                    <div class="hint-overlay"></div>
                     <div class="card-front">
-                      <span class="card-number">${item.id}</span>
+                      <div class="card-front-content">
+                        <span class="card-number">${item.id}</span>
+                        <div class="card-hint-overlay"></div>
+                        <div class="card-hint-text">A등급 이상</div>
+                      </div>
                       <div class="card-hover-overlay">선택</div>
                     </div>
                     <div class="card-back" style="background-color: ${gradeColors[item.grade]};">
@@ -158,7 +171,6 @@ class LottoGame extends HTMLElement {
         </div>
       </div>
 
-      <!-- New Confirmation Modal -->
       <div id="confirmation-modal" class="modal-overlay">
         <div class="modal-content">
           <div class="modal-header">
@@ -167,7 +179,6 @@ class LottoGame extends HTMLElement {
           </div>
           <div class="modal-body">
             <p class="primary-message">참여권을 사용하여 게임에 참여하시겠습니까?</p>
-            <p class="secondary-message">참여하기 즉시 게임이 진행되며, 취소가 불가능합니다.</p>
           </div>
           <div class="modal-footer">
             <button id="cancel-flip-btn" class="cancel-btn">취소</button>
@@ -177,30 +188,32 @@ class LottoGame extends HTMLElement {
       </div>
     `;
     
-    // Event Listeners
     this.shadowRoot.getElementById('buy-ticket-btn').addEventListener('click', () => this.buyTicket());
     this.shadowRoot.getElementById('reset-btn').addEventListener('click', () => this.resetGame());
     this.shadowRoot.querySelectorAll('.card').forEach(card => {
       card.addEventListener('click', () => this.handleCardClick(card));
     });
     
-    // New Modal Listeners
     this.shadowRoot.getElementById('confirm-flip-btn').addEventListener('click', () => this.proceedWithFlip());
-    this.shadowRoot.getElementById('cancel-flip-btn').addEventListener('click', () => this.hideModal());
-    this.shadowRoot.getElementById('modal-close-btn').addEventListener('click', () => this.hideModal());
-    this.shadowRoot.getElementById('confirmation-modal').addEventListener('click', (e) => { if (e.target.id === 'confirmation-modal') this.hideModal(); });
+    this.shadowRoot.getElementById('cancel-flip-btn').addEventListener('click', () => this.cancelFlip());
+    this.shadowRoot.getElementById('modal-close-btn').addEventListener('click', () => this.cancelFlip());
+    this.shadowRoot.getElementById('confirmation-modal').addEventListener('click', (e) => { if (e.target.id === 'confirmation-modal') this.cancelFlip(); });
 
     this.updateInfoPanel();
     this.updateTicketCount();
     this.updateHintTracker();
   }
 
-  showModal() {
+  showConfirmationModal() {
     this.shadowRoot.getElementById('confirmation-modal').style.display = 'flex';
   }
 
-  hideModal() {
+  hideConfirmationModal() {
     this.shadowRoot.getElementById('confirmation-modal').style.display = 'none';
+  }
+  
+  cancelFlip() {
+    this.hideConfirmationModal();
     this.cardToFlip = null;
   }
   
@@ -235,12 +248,14 @@ class LottoGame extends HTMLElement {
 
     if (this.tickets > 0 && !cardData.flipped) {
       this.cardToFlip = card;
-      this.showModal();
+      this.showConfirmationModal();
     }
   }
 
   proceedWithFlip() {
     if (!this.cardToFlip) return;
+
+    this.hideConfirmationModal();
 
     const card = this.cardToFlip;
     const cardId = parseInt(card.dataset.id, 10);
@@ -251,10 +266,16 @@ class LottoGame extends HTMLElement {
       this.shadowRoot.getElementById('reset-btn').disabled = false;
     }
 
-    this.tickets--; this.updateTicketCount();
-    card.classList.add('flipped'); cardData.flipped = true;
-    if (card.classList.contains('hinted')) card.classList.remove('hinted');
-    if (this.gradeCounts[cardData.grade] > 0) this.gradeCounts[cardData.grade]--;
+    this.tickets--; 
+    this.updateTicketCount();
+    card.classList.add('flipped'); 
+    cardData.flipped = true;
+    if (card.classList.contains('hinted')) {
+      card.classList.remove('hinted');
+    }
+    if (this.gradeCounts[cardData.grade] > 0) {
+      this.gradeCounts[cardData.grade]--;
+    }
     this.updateInfoPanel();
     
     this.hintCountdown--;
@@ -275,7 +296,7 @@ class LottoGame extends HTMLElement {
         }, 500);
     }
     
-    this.hideModal();
+    this.cardToFlip = null; 
   }
   
   updateHintTracker() {
