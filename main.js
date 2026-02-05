@@ -11,6 +11,7 @@ class LottoGame extends HTMLElement {
     this.gameStarted = false;
     this.hintCountdown = 3;
     this.cardToFlip = null;
+    this.confirmationAction = null;
     this.gradeCounts = { SSS: 1, SS: 2, S: 6, A: 10, B: 18, C: 12 };
     
     let gradePool = Object.entries(this.gradeCounts).flatMap(([grade, count]) => Array(count).fill(grade));
@@ -178,43 +179,46 @@ class LottoGame extends HTMLElement {
             <span id="modal-close-btn" class="modal-close-btn">&times;</span>
           </div>
           <div class="modal-body">
-            <p class="primary-message">참여권을 사용하여 게임에 참여하시겠습니까?</p>
+            <p class="primary-message"></p>
           </div>
           <div class="modal-footer">
-            <button id="cancel-flip-btn" class="cancel-btn">취소</button>
-            <button id="confirm-flip-btn" class="confirm-btn">확인</button>
+            <button id="modal-cancel-btn" class="cancel-btn">취소</button>
+            <button id="modal-confirm-btn" class="confirm-btn">확인</button>
           </div>
         </div>
       </div>
     `;
     
     this.shadowRoot.getElementById('buy-ticket-btn').addEventListener('click', () => this.buyTicket());
-    this.shadowRoot.getElementById('reset-btn').addEventListener('click', () => this.resetGame());
+    this.shadowRoot.getElementById('reset-btn').addEventListener('click', () => this.handleResetClick());
     this.shadowRoot.querySelectorAll('.card').forEach(card => {
       card.addEventListener('click', () => this.handleCardClick(card));
     });
     
-    this.shadowRoot.getElementById('confirm-flip-btn').addEventListener('click', () => this.proceedWithFlip());
-    this.shadowRoot.getElementById('cancel-flip-btn').addEventListener('click', () => this.cancelFlip());
-    this.shadowRoot.getElementById('modal-close-btn').addEventListener('click', () => this.cancelFlip());
-    this.shadowRoot.getElementById('confirmation-modal').addEventListener('click', (e) => { if (e.target.id === 'confirmation-modal') this.cancelFlip(); });
+    this.shadowRoot.getElementById('modal-confirm-btn').addEventListener('click', () => this.proceedWithConfirmation());
+    this.shadowRoot.getElementById('modal-cancel-btn').addEventListener('click', () => this.cancelConfirmation());
+    this.shadowRoot.getElementById('modal-close-btn').addEventListener('click', () => this.cancelConfirmation());
+    this.shadowRoot.getElementById('confirmation-modal').addEventListener('click', (e) => { if (e.target.id === 'confirmation-modal') this.cancelConfirmation(); });
 
     this.updateInfoPanel();
     this.updateTicketCount();
     this.updateHintTracker();
   }
 
-  showConfirmationModal() {
+  showConfirmationModal(message, action) {
+    this.shadowRoot.querySelector('.primary-message').textContent = message;
+    this.confirmationAction = action;
     this.shadowRoot.getElementById('confirmation-modal').style.display = 'flex';
   }
 
   hideConfirmationModal() {
     this.shadowRoot.getElementById('confirmation-modal').style.display = 'none';
+    this.confirmationAction = null;
+    this.cardToFlip = null;
   }
   
-  cancelFlip() {
+  cancelConfirmation() {
     this.hideConfirmationModal();
-    this.cardToFlip = null;
   }
   
   updateInfoPanel() {
@@ -248,18 +252,39 @@ class LottoGame extends HTMLElement {
 
     if (this.tickets > 0 && !cardData.flipped) {
       this.cardToFlip = card;
-      this.showConfirmationModal();
+      this.showConfirmationModal('참여권을 사용하여 게임에 참여하시겠습니까?', 'flip');
+    }
+  }
+
+  handleResetClick() {
+    this.showConfirmationModal('게임판을 리셋하시겠습니까?', 'reset_1');
+  }
+  
+  proceedWithConfirmation() {
+    switch (this.confirmationAction) {
+        case 'flip':
+            this.proceedWithFlip();
+            break;
+        case 'reset_1':
+            this.showConfirmationModal('정말로 리셋하시겠습니까?', 'reset_2');
+            break;
+        case 'reset_2':
+            this.resetGame();
+            break;
+        default:
+            this.hideConfirmationModal();
+            break;
     }
   }
 
   proceedWithFlip() {
     if (!this.cardToFlip) return;
-
-    this.hideConfirmationModal();
-
+    
     const card = this.cardToFlip;
     const cardId = parseInt(card.dataset.id, 10);
     const cardData = this.boardData.find(item => item.id === cardId);
+    
+    this.hideConfirmationModal();
 
     if (!this.gameStarted) {
       this.gameStarted = true;
