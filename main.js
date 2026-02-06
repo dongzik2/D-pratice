@@ -207,12 +207,13 @@ class LottoGame extends HTMLElement {
             transform: translateY(-2px);
         }
         .card-number { 
-            color: #3b4d70; 
+            color: var(--accent-gold); 
             font-size: 2.5rem; 
             font-weight: 700; 
             transition: color 0.3s;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-        .card:not(.flipped):hover .card-number { color: var(--accent-gold); opacity: 1; }
+        .card:not(.flipped):hover .card-number { color: #fff; opacity: 1; text-shadow: 0 0 15px var(--accent-gold); }
         
         /* Hover Overlay Logic - Simplified for premium feel */
         .card-hover-overlay { display: none; } /* Removed explicit overlay, using border/glow instead */
