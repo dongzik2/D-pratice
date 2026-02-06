@@ -13,12 +13,12 @@ class LottoGame extends HTMLElement {
     this.cardToFlip = null;
     this.confirmationAction = null;
     this.gradeCounts = { SSS: 1, SS: 2, S: 6, A: 10, B: 18, C: 12 };
-    
+
     let gradePool = Object.entries(this.gradeCounts).flatMap(([grade, count]) => Array(count).fill(grade));
 
     for (let i = gradePool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [gradePool[i], gradePool[j]] = [gradePool[j], gradePool[i]];
+      const j = Math.floor(Math.random() * (i + 1));
+      [gradePool[i], gradePool[j]] = [gradePool[j], gradePool[i]];
     }
 
     this.boardData = gradePool.map((grade, i) => ({
@@ -33,8 +33,8 @@ class LottoGame extends HTMLElement {
 
   render() {
     const gradeColors = {
-        SSS: 'var(--sss-color)', SS: 'var(--ss-color)', S: 'var(--s-color)',
-        A: 'var(--a-color)', B: 'var(--b-color)', C: 'var(--c-color)',
+      SSS: 'var(--sss-color)', SS: 'var(--ss-color)', S: 'var(--s-color)',
+      A: 'var(--a-color)', B: 'var(--b-color)', C: 'var(--c-color)',
     };
 
     this.shadowRoot.innerHTML = `
@@ -187,18 +187,29 @@ class LottoGame extends HTMLElement {
           </div>
         </div>
       </div>
+
+      <!-- Box Animation Overlay -->
+      <div id="animation-overlay" class="animation-overlay">
+          <div id="mystery-box" class="mystery-box">📦</div>
+          <div id="grade-reveal" class="grade-reveal"></div>
+          <div id="animation-message" class="animation-message"></div>
+          <button id="animation-btn" class="animation-btn">확인</button>
+      </div>
     `;
-    
+
     this.shadowRoot.getElementById('buy-ticket-btn').addEventListener('click', () => this.buyTicket());
     this.shadowRoot.getElementById('reset-btn').addEventListener('click', () => this.handleResetClick());
     this.shadowRoot.querySelectorAll('.card').forEach(card => {
       card.addEventListener('click', () => this.handleCardClick(card));
     });
-    
+
     this.shadowRoot.getElementById('modal-confirm-btn').addEventListener('click', () => this.proceedWithConfirmation());
     this.shadowRoot.getElementById('modal-cancel-btn').addEventListener('click', () => this.cancelConfirmation());
     this.shadowRoot.getElementById('modal-close-btn').addEventListener('click', () => this.cancelConfirmation());
     this.shadowRoot.getElementById('confirmation-modal').addEventListener('click', (e) => { if (e.target.id === 'confirmation-modal') this.cancelConfirmation(); });
+
+    // Animation Event Listeners
+    this.shadowRoot.getElementById('animation-btn').addEventListener('click', () => this.finishAnimation());
 
     this.updateInfoPanel();
     this.updateTicketCount();
@@ -216,16 +227,16 @@ class LottoGame extends HTMLElement {
     this.confirmationAction = null;
     this.cardToFlip = null;
   }
-  
+
   cancelConfirmation() {
     this.hideConfirmationModal();
   }
-  
+
   updateInfoPanel() {
     const infoPanel = this.shadowRoot.querySelector('.info-panel-content');
     const gradeOrder = ['SSS', 'SS', 'S', 'A', 'B', 'C'];
     if (infoPanel) {
-        infoPanel.innerHTML = gradeOrder.map(grade => `
+      infoPanel.innerHTML = gradeOrder.map(grade => `
             <div class="info-item">
                 <div class="info-item-label">
                     <div class="color-box" style="background-color: var(--${grade.toLowerCase()}-color);"></div>
@@ -238,12 +249,12 @@ class LottoGame extends HTMLElement {
   }
 
   buyTicket() {
-      this.tickets++;
-      this.updateTicketCount();
+    this.tickets++;
+    this.updateTicketCount();
   }
-  
+
   updateTicketCount() {
-      this.shadowRoot.getElementById('ticket-count').textContent = `x${this.tickets}`;
+    this.shadowRoot.getElementById('ticket-count').textContent = `x${this.tickets}`;
   }
 
   handleCardClick(card) {
@@ -259,31 +270,37 @@ class LottoGame extends HTMLElement {
   handleResetClick() {
     this.showConfirmationModal('게임판을 리셋하시겠습니까?', 'reset_1');
   }
-  
+
   proceedWithConfirmation() {
     switch (this.confirmationAction) {
-        case 'flip':
-            this.proceedWithFlip();
-            break;
-        case 'reset_1':
-            this.showConfirmationModal('정말로 리셋하시겠습니까?', 'reset_2');
-            break;
-        case 'reset_2':
-            this.resetGame();
-            break;
-        default:
-            this.hideConfirmationModal();
-            break;
+      case 'flip':
+        // Logic Changed: Start Box Animation instead of direct flip
+        const card = this.cardToFlip;
+        const cardId = parseInt(card.dataset.id, 10);
+        const cardData = this.boardData.find(item => item.id === cardId);
+
+        this.hideConfirmationModal(); // Close confirm modal
+        this.showBoxAnimation(cardData); // Start animation
+        break;
+      case 'reset_1':
+        this.showConfirmationModal('정말로 리셋하시겠습니까?', 'reset_2');
+        break;
+      case 'reset_2':
+        this.resetGame();
+        break;
+      default:
+        this.hideConfirmationModal();
+        break;
     }
   }
 
   proceedWithFlip() {
     if (!this.cardToFlip) return;
-    
+
     const card = this.cardToFlip;
     const cardId = parseInt(card.dataset.id, 10);
     const cardData = this.boardData.find(item => item.id === cardId);
-    
+
     this.hideConfirmationModal();
 
     if (!this.gameStarted) {
@@ -291,9 +308,9 @@ class LottoGame extends HTMLElement {
       this.shadowRoot.getElementById('reset-btn').disabled = false;
     }
 
-    this.tickets--; 
+    this.tickets--;
     this.updateTicketCount();
-    card.classList.add('flipped'); 
+    card.classList.add('flipped');
     cardData.flipped = true;
     if (card.classList.contains('hinted')) {
       card.classList.remove('hinted');
@@ -302,10 +319,10 @@ class LottoGame extends HTMLElement {
       this.gradeCounts[cardData.grade]--;
     }
     this.updateInfoPanel();
-    
+
     this.hintCountdown--;
     this.updateHintTracker();
-    
+
     if (this.hintCountdown === 0) {
       this.provideHint();
       this.hintCountdown = 3;
@@ -314,28 +331,28 @@ class LottoGame extends HTMLElement {
 
     const allFlipped = this.boardData.every(item => item.flipped);
     if (allFlipped) {
-        setTimeout(() => {
-            alert('모든 보상을 획득했습니다! 참여권 1개를 보상으로 지급합니다.');
-            this.tickets++;
-            this.initializeGame();
-        }, 500);
+      setTimeout(() => {
+        alert('모든 보상을 획득했습니다! 참여권 1개를 보상으로 지급합니다.');
+        this.tickets++;
+        this.initializeGame();
+      }, 500);
     }
-    
-    this.cardToFlip = null; 
+
+    this.cardToFlip = null;
   }
-  
+
   updateHintTracker() {
-      const countdown = this.hintCountdown;
-      const container = this.shadowRoot.querySelector('.hint-text-container');
-      if (container) {
-          if (countdown === 0) {
-              container.innerHTML = `<span><span id="hint-countdown-span">힌트 제공!</span></span>`;
-          } else {
-              container.innerHTML = `<span>A등급 이상 힌트까지<br><span id="hint-countdown-span">${countdown}</span>회 남았습니다.</span>`;
-          }
+    const countdown = this.hintCountdown;
+    const container = this.shadowRoot.querySelector('.hint-text-container');
+    if (container) {
+      if (countdown === 0) {
+        container.innerHTML = `<span><span id="hint-countdown-span">힌트 제공!</span></span>`;
+      } else {
+        container.innerHTML = `<span>A등급 이상 힌트까지<br><span id="hint-countdown-span">${countdown}</span>회 남았습니다.</span>`;
       }
-      const steps = this.shadowRoot.querySelectorAll('.hint-step');
-      steps.forEach((step, i) => step.classList.toggle('active', i < (3 - countdown)));
+    }
+    const steps = this.shadowRoot.querySelectorAll('.hint-step');
+    steps.forEach((step, i) => step.classList.toggle('active', i < (3 - countdown)));
   }
 
   provideHint() {
@@ -344,12 +361,67 @@ class LottoGame extends HTMLElement {
       const hintedCardData = potentialHints[Math.floor(Math.random() * potentialHints.length)];
       hintedCardData.hinted = true;
       const cardElement = this.shadowRoot.querySelector(`.card[data-id='${hintedCardData.id}']`);
-      if(cardElement) cardElement.classList.add('hinted');
+      if (cardElement) cardElement.classList.add('hinted');
     }
   }
 
   resetGame() {
     this.initializeGame();
+  }
+
+  showBoxAnimation(cardData) {
+    const overlay = this.shadowRoot.getElementById('animation-overlay');
+    const box = this.shadowRoot.getElementById('mystery-box');
+    const reveal = this.shadowRoot.getElementById('grade-reveal');
+    const message = this.shadowRoot.getElementById('animation-message');
+    const btn = this.shadowRoot.getElementById('animation-btn');
+
+    // Reset State
+    overlay.style.display = 'flex';
+    box.style.display = 'block';
+    box.classList.remove('shake');
+    reveal.style.display = 'none';
+    reveal.textContent = '';
+    message.textContent = '';
+    message.style.opacity = '0';
+    btn.style.display = 'none';
+
+    // 1. Shake Animation (0s - 1.5s)
+    setTimeout(() => {
+      box.classList.add('shake');
+    }, 100);
+
+    // 2. Open Box & Reveal (1.5s)
+    setTimeout(() => {
+      box.style.display = 'none'; // Hide box
+
+      // Show Grade
+      reveal.textContent = `${cardData.grade}등급!`;
+      reveal.style.color = this.getGradeColor(cardData.grade); // Helper needed or use simple map
+      reveal.style.display = 'block';
+
+      // Show Message
+      message.textContent = '획득을 축하합니다!';
+      message.style.opacity = '1';
+
+      // Show Button
+      btn.style.display = 'block';
+
+    }, 1500);
+  }
+
+  finishAnimation() {
+    const overlay = this.shadowRoot.getElementById('animation-overlay');
+    overlay.style.display = 'none';
+    this.proceedWithFlip(); // Continue original logic
+  }
+
+  getGradeColor(grade) {
+    const colors = {
+      SSS: '#ff69b4', SS: '#7A28D1', S: '#55aaff',
+      A: '#55ff55', B: '#ff9900', C: '#aaaaaa',
+    };
+    return colors[grade] || '#fff';
   }
 }
 
