@@ -1,21 +1,32 @@
-
 /* Define color variables for the application */
 :root {
     /* Core Palette */
-    --primary-blue-dark: #0a0f31; /* Deepest blue for the main background */
-    --container-blue: #1c2a6c;     /* Lighter blue for the main game container */
-    --text-color-bright: #ffffff;    /* Bright white for titles and key text */
-    --text-color-dark: #a9b3d1;     /* Muted blue/gray for less important text */
-    --highlight-yellow: #ffd700;    /* Golden yellow for highlights and important numbers */
-    --primary-blue-light: #4ab3ff;  /* Light blue for highlights and interactive elements */
+    --primary-blue-dark: #0a0f31;
+    /* Deepest blue for the main background */
+    --container-blue: #1c2a6c;
+    /* Lighter blue for the main game container */
+    --text-color-bright: #ffffff;
+    /* Bright white for titles and key text */
+    --text-color-dark: #a9b3d1;
+    /* Muted blue/gray for less important text */
+    --highlight-yellow: #ffd700;
+    /* Golden yellow for highlights and important numbers */
+    --primary-blue-light: #4ab3ff;
+    /* Light blue for highlights and interactive elements */
 
     /* Grade-Specific Colors */
-    --sss-color: #ff69b4; /* Pink for SSS-Grade */
-    --ss-color: #7A28D1;  /* Vibrant Purple for SS-Grade */
-    --s-color: #55aaff;   /* Example: Bright Blue */
-    --a-color: #55ff55;   /* Example: Bright Green */
-    --b-color: #ff9900;   /* Orange for B-Grade */
-    --c-color: #aaaaaa;   /* Example: Gray */
+    --sss-color: #ff69b4;
+    /* Pink for SSS-Grade */
+    --ss-color: #7A28D1;
+    /* Vibrant Purple for SS-Grade */
+    --s-color: #55aaff;
+    /* Example: Bright Blue */
+    --a-color: #55ff55;
+    /* Example: Bright Green */
+    --b-color: #ff9900;
+    /* Orange for B-Grade */
+    --c-color: #aaaaaa;
+    /* Example: Gray */
 }
 
 /* Basic Body Styles */
@@ -32,19 +43,91 @@ body {
 }
 
 
-/* Animation Overlay */
+/* Removing old modal styles if present, but relying on main.js logic primarily */
+
+/* Animation Overlay (Container) */
+/* Animation Overlay (Container) */
 .animation-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(0, 0, 0, 0.6);
+    /* Reduced opacity to see card flip */
     display: none;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     z-index: 2000;
+}
+
+/* Vertical Modal Window */
+.modal-content.vertical {
+    width: 380px;
+    height: 550px;
+    /* Taller */
+    background: linear-gradient(135deg, #1c2a6c 0%, #0d123c 100%);
+    border: 2px solid #4ab3ff;
+    border-radius: 8px;
+    /* Match standard modal */
+    box-shadow: 0 0 30px rgba(74, 179, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    animation: modal-pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-content.vertical .modal-header {
+    border-bottom: 1px solid #4ab3ff;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+}
+
+.modal-content.vertical .modal-title {
+    color: white;
+    font-weight: 600;
+}
+
+.modal-content.vertical .modal-close-btn {
+    color: #aaa;
+    cursor: pointer;
+    font-size: 1.8rem;
+}
+
+.modal-content.vertical .modal-close-btn:hover {
+    color: white;
+}
+
+.modal-content.vertical .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* Vertically center content */
+    align-items: center;
+    padding: 20px;
+}
+
+.modal-content.vertical .modal-footer {
+    padding: 0;
+    display: flex;
+}
+
+.modal-content.vertical .confirm-btn {
+    width: 100%;
+    background-color: var(--modal-green);
+    color: white;
+    border: none;
+    padding: 18px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.modal-content.vertical .confirm-btn:hover {
+    filter: brightness(1.2);
 }
 
 .mystery-box {
@@ -80,38 +163,59 @@ body {
     transition: opacity 0.5s;
 }
 
+/* Hide original button logic from style.css since we render dynamically */
 .animation-btn {
-    background: linear-gradient(to right, #00c6ff, #0072ff);
-    border: none;
-    padding: 15px 40px;
-    color: white;
-    font-size: 1.2rem;
-    font-weight: bold;
-    border-radius: 30px;
-    margin-top: 30px;
-    cursor: pointer;
-    display: none; /* Hidden initially */
-    box-shadow: 0 0 15px rgba(0, 114, 255, 0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.animation-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 25px rgba(0, 114, 255, 0.8);
+    display: none;
 }
 
 /* Keyframes */
 @keyframes box-shake {
-    0% { transform: translate(0, 0) rotate(0deg); }
-    25% { transform: translate(-5px, 5px) rotate(-5deg); }
-    50% { transform: translate(0, 0) rotate(0deg); }
-    75% { transform: translate(5px, -5px) rotate(5deg); }
-    100% { transform: translate(0, 0) rotate(0deg); }
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    25% {
+        transform: translate(-5px, 5px) rotate(-5deg);
+    }
+
+    50% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    75% {
+        transform: translate(5px, -5px) rotate(5deg);
+    }
+
+    100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
 }
 
 @keyframes grade-pop {
-    0% { transform: scale(0); opacity: 0; }
-    70% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(0) translateY(50px);
+        opacity: 0;
+    }
+
+    60% {
+        transform: scale(1.3) translateY(-10px);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
 }
 
+@keyframes modal-pop-in {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
